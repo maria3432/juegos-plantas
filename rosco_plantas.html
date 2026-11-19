@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El rosco mágico de las plantas</title>
+<style>
+:root{--pink:#fbe4ef;--green:#dff1d9;--dark:#35643c;--yellow:#fff1c9;--blue:#dceeff}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS",Arial,sans-serif;background:linear-gradient(135deg,#fff8e7,#eaf7e5);color:#31583a;text-align:center}
+main{max-width:980px;margin:auto;padding:18px}
+header{background:#fff;border:4px solid #cde7c7;border-radius:25px;padding:16px;margin:12px auto;box-shadow:0 5px 12px #0001}
+h1{margin:5px;color:#397445;font-size:clamp(1.6rem,4vw,2.5rem)}
+p{font-size:1.1rem}
+#rosco{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:20px auto;max-width:720px}
+.letter{width:48px;height:48px;border-radius:50%;border:3px solid #8fc58b;background:#fff;font-size:1.3rem;font-weight:bold;color:#35643c;cursor:pointer;box-shadow:0 2px 3px #0001}
+.letter.current{background:#ffe28a;border-color:#e5a933;transform:scale(1.12)}
+.letter.correct{background:#bfe7b9;border-color:#5ca65a}
+.letter.wrong{background:#ffd0d0;border-color:#e17a7a}
+.letter.pass{background:#dceeff;border-color:#6da6db}
+#panel{background:white;border:4px solid #f4d6e5;border-radius:24px;padding:20px;margin:15px auto;max-width:700px;min-height:240px}
+#emoji{font-size:4rem;margin:8px}
+#question{font-size:clamp(1.2rem,3vw,1.6rem);font-weight:bold;margin:10px}
+#answer{font-size:1.25rem;border:3px solid #cde7c7;border-radius:14px;padding:12px;width:min(90%,400px);text-align:center;text-transform:uppercase}
+button.action{background:#f6cde0;border:0;border-radius:16px;padding:12px 18px;font-size:1.1rem;font-weight:bold;color:#75415b;cursor:pointer;margin:8px}
+button.action:hover{filter:brightness(.97)}
+#feedback{min-height:40px;font-size:1.2rem;font-weight:bold;margin:12px}
+#stats{font-size:1.1rem;font-weight:bold}
+footer{font-size:.95rem;padding:10px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>🌼 EL ROSCO MÁGICO DE LAS PLANTAS 🌼</h1>
+<p>¡Escucha la pista, piensa y encuentra la palabra!</p>
+</header>
+<div id="rosco" aria-label="Rosco de letras"></div>
+<section id="panel">
+<div id="emoji">🌱</div>
+<div id="question">Pulsa una letra del rosco para empezar.</div>
+<button class="action" onclick="speakQuestion()">🔊 Escuchar pista</button><br>
+<input id="answer" autocomplete="off" placeholder="ESCRIBE TU RESPUESTA" aria-label="Respuesta">
+<br>
+<button class="action" onclick="checkAnswer()">🌟 COMPROBAR</button>
+<button class="action" onclick="passLetter()">⏭ PASAPALABRA</button>
+<div id="feedback" role="status"></div>
+<div id="stats">Aciertos: 0 · Por descubrir: 12</div>
+</section>
+<button class="action" onclick="restart()">🔄 VOLVER A JUGAR</button>
+<footer>¡Lo importante es aprender y divertirse! 🌷</footer>
+</main>
+<script>
+const items=[
+ {l:"A",a:"AGUA",e:"💧",q:"Empieza por A. Las plantas la necesitan para vivir y crecer."},
+ {l:"C",a:"CUIDAR",e:"🧑‍🌾",q:"Empieza por C. Lo que debemos hacer con las plantas para que estén bien."},
+ {l:"F",a:"FLOR",e:"🌸",q:"Empieza por F. Es una parte de muchas plantas y puede tener pétalos de colores."},
+ {l:"G",a:"GERMINAR",e:"🌱",q:"Empieza por G. Es cuando una semilla empieza a crecer."},
+ {l:"H",a:"HOJAS",e:"🍃",q:"Empieza por H. Son verdes y nacen en las ramas o el tallo."},
+ {l:"L",a:"LUZ",e:"☀️",q:"Empieza por L. Las plantas la necesitan, por ejemplo, del sol."},
+ {l:"M",a:"MADURA",e:"🌻",q:"Empieza por M. Así está una planta cuando ya ha crecido mucho."},
+ {l:"P",a:"PLANTA",e:"🪴",q:"Empieza por P. Es un ser vivo que puede crecer en la tierra."},
+ {l:"R",a:"RAIZ",e:"🪴",q:"Empieza por R. Está debajo de la tierra y ayuda a la planta a sujetarse."},
+ {l:"S",a:"SEMILLA",e:"🌰",q:"Empieza por S. De ella puede nacer una nueva planta."},
+ {l:"T",a:"TALLO",e:"🌿",q:"Empieza por T. Sostiene la planta y conecta sus partes."},
+ {l:"V",a:"VERDE",e:"💚",q:"Contiene la idea del color de muchas hojas. ¿De qué color son?"}
+];
+let current=-1, solved=new Set(), passed=new Set(), correct=0;
+const rosco=document.getElementById("rosco");
+items.forEach((it,i)=>{let b=document.createElement("button");b.className="letter";b.textContent=it.l;b.setAttribute("aria-label","Letra "+it.l);b.onclick=()=>select(i);b.id="letter"+i;rosco.appendChild(b)});
+function select(i){current=i;document.querySelectorAll(".letter").forEach(b=>b.classList.remove("current"));document.getElementById("letter"+i).classList.add("current");document.getElementById("emoji").textContent=items[i].e;document.getElementById("question").textContent=items[i].q;document.getElementById("answer").value="";document.getElementById("feedback").textContent="";document.getElementById("answer").focus();updateStats();}
+function speakQuestion(){if(!("speechSynthesis" in window)){document.getElementById("feedback").textContent="Puedes leer la pista en voz alta.";return;}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(items[current<0?0:current].q);u.lang="es-ES";speechSynthesis.speak(u)}
+function checkAnswer(){if(current<0){document.getElementById("feedback").textContent="¡Pulsa primero una letra!";return;}if(solved.has(current)){document.getElementById("feedback").textContent="¡Esta palabra ya la descubriste!";return;}let val=document.getElementById("answer").value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();if(val===items[current].a){solved.add(current);passed.delete(current);correct++;document.getElementById("letter"+current).classList.remove("current","pass","wrong");document.getElementById("letter"+current).classList.add("correct");document.getElementById("feedback").textContent="¡MUY BIEN! 🌟 ¡LO HAS CONSEGUIDO!";updateStats();if(solved.size===items.length){document.getElementById("question").textContent="¡HAS COMPLETADO EL ROSCO!";document.getElementById("feedback").textContent="¡FANTÁSTICO! ERES UN EXPLORADOR DE LAS PLANTAS 🌷";}}else{document.getElementById("feedback").textContent="¡BUEN INTENTO! Prueba otra vez o pulsa PASAPALABRA. 💚";}}
+function passLetter(){if(current<0){select(0);return;}if(!solved.has(current)){passed.add(current);document.getElementById("letter"+current).classList.remove("current","wrong");document.getElementById("letter"+current).classList.add("pass");}let next=items.findIndex((x,i)=>!solved.has(i)&&!passed.has(i));if(next<0)next=items.findIndex(x=>!solved.has(items.indexOf(x)));if(next>=0)select(next);else document.getElementById("feedback").textContent="¡Has pasado todas las que quedaban! Vuelve a las letras azules.";}
+function updateStats(){document.getElementById("stats").textContent="Aciertos: "+solved.size+" · Por descubrir: "+(items.length-solved.size);}
+function restart(){current=-1;solved.clear();passed.clear();correct=0;document.querySelectorAll(".letter").forEach(b=>b.className="letter");document.getElementById("emoji").textContent="🌱";document.getElementById("question").textContent="Pulsa una letra del rosco para empezar.";document.getElementById("answer").value="";document.getElementById("feedback").textContent="";updateStats();}
+document.getElementById("answer").addEventListener("keydown",e=>{if(e.key==="Enter")checkAnswer()});
+</script>
+</body>
+</html>
